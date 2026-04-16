@@ -3,18 +3,20 @@ Trust What You See Again
 
 A practical deepfake detection system designed as a real-world forensic tool — not just a machine learning model.
 
-🧠 Overview
+
+## Overview:
 
 MaskOff AI is a hybrid forensic system that detects deepfake videos by analyzing visual, temporal, and audio manipulation patterns.
 
 It combines multiple detection layers to provide a clear, explainable verdict, along with forensic evidence and professional reports suitable for real-world investigation scenarios.
 
-🎯 Why It Matters
+
+## Why It Matters:
 
 In an era where synthetic media is becoming indistinguishable from reality, MaskOff AI aims to restore trust in digital content by providing transparent and explainable forensic analysis.
 
-⚙️ Key Features
-🔍 Multi-Factor Face Analysis
+### Key Features
+## Multi-Factor Face Analysis
 
 Advanced visual forensics including:
 
@@ -25,29 +27,37 @@ Color inconsistencies
 Noise patterns
 Eye-region anomalies
 Temporal consistency across frames
-🎤 Audio Analysis (Experimental)
+
+
+## Audio Analysis (Experimental)
 
 MFCC-based feature extraction and spectral analysis for detecting potential voice manipulation.
+
 
 🧾 Explainability Layer
 
 Provides human-readable reasons behind each detection decision (Top suspicious indicators).
 
+
 🖼️ Evidence Gallery
 
 Automatically captures and displays suspicious frames for visual inspection.
+
 
 📊 Interactive Dashboard
 
 Real-time visualization of deepfake probability across video frames.
 
+
 📹 Live Camera Detection
 
 Real-time deepfake detection using webcam feed with instant AI-based analysis.
 
+
 🎯 Unified Risk Score
 
 A combined forensic score (0–100%) that evaluates visual, temporal, and audio manipulation signals across multiple detection layers.
+
 
 📄 Forensic Report Generator
 
@@ -58,6 +68,8 @@ Risk assessment
 Timeline graphs
 Detection reasoning
 Suspicious frame evidence
+
+
 🔬 How It Works
 Upload a video file (MP4, AVI, MOV)
 Hybrid analysis engine processes:
@@ -70,6 +82,8 @@ Unified Risk Score
 Suspicious frames are extracted and stored
 Results are visualized in an interactive dashboard
 A full forensic report can be generated and downloaded
+
+
 🧰 Technologies Used
 Python 3.10
 Streamlit – Interactive UI
@@ -78,6 +92,8 @@ Librosa – Audio feature extraction (MFCC)
 Plotly – Data visualization
 FPDF – PDF report generation
 Scikit-learn – Analytical modeling
+
+
 🚀 Installation
 # 1. Clone repository
 git clone https://github.com/rababahh492-lgtm/MaskOff-AI.git
@@ -96,6 +112,8 @@ streamlit run app.py
 Then open:
 
 http://localhost:8501
+
+
 📁 Project Structure
 MaskOff-AI/
 ├── app.py                 # Main application
@@ -109,18 +127,23 @@ MaskOff-AI/
 ├── weights/              # Model weights
 ├── requirements.txt      # Dependencies
 └── README.md
+
+
 📊 Sample Report Includes
 Executive summary with final verdict
 Unified risk score
 Deepfake probability timeline
 Key detection factors
 Top suspicious frames
-🚧 Future Improvements
+
+___ Future Improvements
 Integration of deep learning models (EfficientNet / CNN)
 Lip-sync inconsistency detection
 Real-time streaming optimization
 Training on large-scale datasets (FaceForensics++)
 Enhanced audio deepfake detection
-💡 Final Note
+
+
+#### Final Note
 
 MaskOff AI is built to bridge the gap between academic models and real-world forensic tools, focusing on explainability, usability, and practical deployment.
