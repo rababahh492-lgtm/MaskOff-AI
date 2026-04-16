@@ -1,95 +1,126 @@
-# 🎭 MaskOff AI
+🎭 MaskOff AI
+Trust What You See Again
 
- *"Trust What You See Again"*
+A practical deepfake detection system designed as a real-world forensic tool — not just a machine learning model.
 
-MaskOff AI is a forensic system that detects deepfake videos by analyzing visual and temporal manipulation patterns.
+🧠 Overview
 
+MaskOff AI is a hybrid forensic system that detects deepfake videos by analyzing visual, temporal, and audio manipulation patterns.
 
- What It Does
+It combines multiple detection layers to provide a clear, explainable verdict, along with forensic evidence and professional reports suitable for real-world investigation scenarios.
 
-MaskOff AI analyzes videos through multiple forensic lenses to detect signs of AI-generated manipulation. It provides a clear, explainable verdict and generates professional reports suitable for investigative use.
+🎯 Why It Matters
 
+In an era where synthetic media is becoming indistinguishable from reality, MaskOff AI aims to restore trust in digital content by providing transparent and explainable forensic analysis.
 
+⚙️ Key Features
+🔍 Multi-Factor Face Analysis
 
-  Key Features
+Advanced visual forensics including:
 
-| Feature | Description |
-|---------|-------------|
-| **Face Analysis** | 7 detection factors: blur, symmetry, edges, colors, noise, eye region, and temporal consistency |
-| **Audio Analysis** | Voice deepfake detection using MFCC and spectral analysis |
-| **Evidence Gallery** | Automatically saves and displays suspicious frames |
-| **Forensic Reports** | Generates detailed PDF reports with risk graphs and detection factors |
-| **Interactive Dashboard** | Real-time visualization of deepfake probability over time |
+Blur detection
+Facial symmetry analysis
+Edge artifacts detection
+Color inconsistencies
+Noise patterns
+Eye-region anomalies
+Temporal consistency across frames
+🎤 Audio Analysis (Experimental)
 
+MFCC-based feature extraction and spectral analysis for detecting potential voice manipulation.
 
+🧾 Explainability Layer
 
-# How It Works
+Provides human-readable reasons behind each detection decision (Top suspicious indicators).
 
-1. **Upload** a video file (MP4, AVI, or MOV)
-2. **AI Engine** analyzes faces and audio track
-3. **Results** show authenticity score and risk level
-4. **Evidence** is displayed in an interactive gallery
-5. **Report** can be downloaded as a professional PDF
+🖼️ Evidence Gallery
 
+Automatically captures and displays suspicious frames for visual inspection.
 
+📊 Interactive Dashboard
 
-# Technologies Used
+Real-time visualization of deepfake probability across video frames.
 
-- **Python 3.10**
-- **Streamlit** – Interactive dashboard
-- **OpenCV** – Face detection and image processing
-- **Librosa** – Audio feature extraction (MFCC)
-- **Plotly** – Interactive graphs
-- **FPDF** – PDF report generation
-- **Scikit-learn** – Analysis algorithms
+📹 Live Camera Detection
 
----
+Real-time deepfake detection using webcam feed with instant AI-based analysis.
 
-#Installation
+🎯 Unified Risk Score
 
- 1. Clone the repository
+A combined forensic score (0–100%) that evaluates visual, temporal, and audio manipulation signals across multiple detection layers.
 
-```bash
+📄 Forensic Report Generator
+
+Generates professional PDF reports including:
+
+Executive summary
+Risk assessment
+Timeline graphs
+Detection reasoning
+Suspicious frame evidence
+🔬 How It Works
+Upload a video file (MP4, AVI, MOV)
+Hybrid analysis engine processes:
+Face features
+Temporal patterns
+Audio signals
+System calculates:
+Authenticity Score
+Unified Risk Score
+Suspicious frames are extracted and stored
+Results are visualized in an interactive dashboard
+A full forensic report can be generated and downloaded
+🧰 Technologies Used
+Python 3.10
+Streamlit – Interactive UI
+OpenCV – Face detection & image processing
+Librosa – Audio feature extraction (MFCC)
+Plotly – Data visualization
+FPDF – PDF report generation
+Scikit-learn – Analytical modeling
+🚀 Installation
+# 1. Clone repository
 git clone https://github.com/rababahh492-lgtm/MaskOff-AI.git
 cd MaskOff-AI
 
-2. Create and activate virtual environment:
+# 2. Create virtual environment
 python -m venv venv
 venv\Scripts\activate
 
-3. Install dependencies:
+# 3. Install dependencies
 pip install -r requirements.txt
 
-4. Run the application:
+# 4. Run the app
 streamlit run app.py
 
-5. Open your browser
-Navigate to: http://localhost:8501
+Then open:
 
-
+http://localhost:8501
 📁 Project Structure
-
 MaskOff-AI/
 ├── app.py                 # Main application
-├── requirements.txt       # Dependencies
-├── models/                # Detection models
-├── utils/                 # Helper modules
-├── training/              # Training scripts
-├── evidence/              # Saved suspicious frames
-├── reports/               # Generated PDF reports
-└── uploads/               # Uploaded videos
+├── core/                 # Core detection & risk logic
+├── models/               # Detection models
+├── utils/                # Helper modules
+├── training/             # Training scripts
+├── evidence/             # Saved suspicious frames
+├── reports/              # Generated reports
+├── uploads/              # Uploaded videos
+├── weights/              # Model weights
+├── requirements.txt      # Dependencies
+└── README.md
+📊 Sample Report Includes
+Executive summary with final verdict
+Unified risk score
+Deepfake probability timeline
+Key detection factors
+Top suspicious frames
+🚧 Future Improvements
+Integration of deep learning models (EfficientNet / CNN)
+Lip-sync inconsistency detection
+Real-time streaming optimization
+Training on large-scale datasets (FaceForensics++)
+Enhanced audio deepfake detection
+💡 Final Note
 
-Sample Report
-The forensic PDF report includes:
-
-Executive summary with verdict
-
-Risk assessment table
-
-Deepfake probability timeline graph
-
-Detection factors and reasons
-
-List of top suspicious frames
-
-
+MaskOff AI is built to bridge the gap between academic models and real-world forensic tools, focusing on explainability, usability, and practical deployment.
