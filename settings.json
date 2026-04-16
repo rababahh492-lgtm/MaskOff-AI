@@ -1,0 +1,17 @@
+{
+    "python.analysis.ignore": [
+        "tensorflow",
+        "tensorflow.keras",
+        "tensorflow.keras.layers", 
+        "tensorflow.keras.models",
+        "tensorflow.keras.callbacks",
+        "tensorflow.keras.applications",
+        "tensorflow.keras.preprocessing"
+    ],
+    "python.linting.enabled": false,
+    "python.analysis.typeCheckingMode": "off",
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingImports": "none",
+        "reportMissingModuleSource": "none"
+    }
+}
