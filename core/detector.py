@@ -1,28 +1,39 @@
-"""
-Deepfake Detector Module
-Main detection logic
-"""
-
 import cv2
 import numpy as np
 import os
+import tensorflow as tf
 
 class DeepfakeDetector:
     def __init__(self):
         self.face_detector = None
         self.input_size = (224, 224)
         self.face_history = []
+        self.ai_model = None
+        self.load_ai_model()
+    
+    def load_ai_model(self):
+        """Load or create AI model for deepfake detection"""
+        model_path = "weights/deepfake_model.h5"
+        if os.path.exists(model_path):
+            try:
+                self.ai_model = tf.keras.models.load_model(model_path)
+                print("✅ AI Model loaded from disk")
+                return True
+            except Exception as e:
+                print(f"⚠️ Could not load model: {e}")
         
-    def _init_face_detector(self):
-        """Lazy initialization of face detector"""
+        # إذا ما في نموذج، نستخدم Heuristics فقط
+        self.ai_model = None
+        print("⚠️ No AI model found, using enhanced heuristics only")
+        return False
+    
+    def extract_faces(self, frame):
+        """Extract face from frame"""
         if self.face_detector is None:
             self.face_detector = cv2.CascadeClassifier(
                 cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
             )
-    
-    def extract_faces(self, frame):
-        """Extract face from frame"""
-        self._init_face_detector()
+        
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = self.face_detector.detectMultiScale(gray, 1.1, 5)
         
@@ -37,197 +48,211 @@ class DeepfakeDetector:
                 return face
         return None
     
-    def analyze_blur(self, gray):
-        """Blur detection"""
+    def analyze_with_ai(self, face):
+        """Analyze face with AI model (if available)"""
+        if self.ai_model is None:
+            return None
+        
+        try:
+            face_input = np.expand_dims(face / 255.0, axis=0)
+            prediction = self.ai_model.predict(face_input, verbose=0)
+            fake_prob = float(prediction[0][0])
+            
+            return {
+                'fake_probability': fake_prob,
+                'real_probability': 1 - fake_prob,
+                'confidence': abs(fake_prob - 0.5) * 2,
+                'model_used': 'AI CNN Model',
+                'reasons': ['AI-based deepfake detection']
+            }
+        except:
+            return None
+    
+    def analyze_face_quality(self, face):
+        """Enhanced heuristic analysis (7 factors)"""
+        if face is None:
+            return 0.5, ["No face detected"], 0.3
+        
+        gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+        h, w = gray.shape
+        
+        # 1. Blur Detection (وضوح الصورة)
         laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
         if laplacian_var < 80:
-            return 0.35, "Very blurry (suspicious)"
+            blur_score = 0.35
+            blur_reason = "Very blurry (suspicious)"
         elif laplacian_var < 150:
-            return 0.15, "Blurry"
+            blur_score = 0.15
+            blur_reason = "Blurry"
         else:
-            return 0.05, "Sharp"
-    
-    def analyze_symmetry(self, gray):
-        """Symmetry analysis"""
-        h, w = gray.shape
-        if w < 2:
-            return 0.5, "Too small"
+            blur_score = 0.05
+            blur_reason = "Sharp"
         
-        left = gray[:, :w//2]
-        right = cv2.flip(gray[:, w//2:], 1)
-        
-        if left.shape != right.shape:
-            return 0.5, "Asymmetric shape"
-        
-        diff = np.mean(np.abs(left.astype(float) - right.astype(float))) / 255
-        symmetry = 1 - diff
-        
-        if symmetry < 0.6:
-            return 0.35, "Very asymmetric (deepfake sign)"
-        elif symmetry < 0.7:
-            return 0.20, "Asymmetric"
-        elif symmetry < 0.8:
-            return 0.10, "Slightly asymmetric"
+        # 2. Symmetry Analysis (تماثل الوجه)
+        if w >= 2:
+            left = gray[:, :w//2]
+            right = cv2.flip(gray[:, w//2:], 1)
+            if left.shape == right.shape:
+                symmetry_score = 1 - (np.mean(np.abs(left.astype(float) - right.astype(float))) / 255)
+            else:
+                symmetry_score = 0.5
         else:
-            return 0.05, "Symmetric"
-    
-    def analyze_edges(self, gray):
-        """Edge artifacts detection"""
+            symmetry_score = 0.5
+        
+        if symmetry_score < 0.6:
+            sym_score = 0.35
+            sym_reason = "Very asymmetric (deepfake sign)"
+        elif symmetry_score < 0.7:
+            sym_score = 0.20
+            sym_reason = "Asymmetric"
+        elif symmetry_score < 0.8:
+            sym_score = 0.10
+            sym_reason = "Slightly asymmetric"
+        else:
+            sym_score = 0.05
+            sym_reason = "Symmetric"
+        
+        # 3. Edge Artifacts (حواف غير طبيعية)
         edges = cv2.Canny(gray, 50, 150)
         edge_density = np.sum(edges > 0) / edges.size if edges.size > 0 else 0
         
         if edge_density > 0.15:
-            return 0.30, "Too many edges (artifact)"
+            edge_score = 0.30
+            edge_reason = "Too many edges (artifact)"
         elif edge_density > 0.10:
-            return 0.15, "High edge density"
+            edge_score = 0.15
+            edge_reason = "High edge density"
         elif edge_density < 0.02:
-            return 0.20, "Too few edges (blending)"
+            edge_score = 0.20
+            edge_reason = "Too few edges (blending)"
         else:
-            return 0.05, "Normal"
-    
-    def analyze_color(self, face):
-        """Color analysis"""
+            edge_score = 0.05
+            edge_reason = "Normal edges"
+        
+        # 4. Color Analysis (تحليل الألوان)
         hsv = cv2.cvtColor(face, cv2.COLOR_BGR2HSV)
         skin_hue = np.mean(hsv[:, :, 0])
         skin_sat = np.mean(hsv[:, :, 1])
         
-        score = 0
-        reasons = []
-        
+        color_score = 0
+        color_reasons = []
         if skin_hue < 5 or skin_hue > 20:
-            score += 0.15
-            reasons.append("Abnormal skin hue")
-        
+            color_score += 0.15
+            color_reasons.append("Abnormal skin hue")
         if skin_sat < 50 or skin_sat > 150:
-            score += 0.10
-            reasons.append("Abnormal saturation")
+            color_score += 0.10
+            color_reasons.append("Abnormal saturation")
+        color_score = min(color_score, 0.25)
         
-        return min(score, 0.30), reasons if reasons else ["Normal colors"]
-    
-    def analyze_noise(self, gray):
-        """Noise analysis"""
+        # 5. Noise Analysis (تحليل الضوضاء)
         noise = np.std(gray) / 255
-        
         if noise < 0.03:
-            return 0.20, "Too smooth (fake)"
+            noise_score = 0.20
+            noise_reason = "Too smooth (fake)"
         elif noise > 0.20:
-            return 0.15, "Too noisy"
+            noise_score = 0.15
+            noise_reason = "Too noisy"
         else:
-            return 0.05, "Normal"
-    
-    def analyze_eye_region(self, gray):
-        """Eye region analysis"""
-        h, w = gray.shape
+            noise_score = 0.05
+            noise_reason = "Normal noise"
+        
+        # 6. Eye Region Analysis (تحليل العينين)
         eye_region = gray[h//3:h//2, :]
-        
-        if eye_region.size == 0:
-            return 0.10, "No eye region"
-        
-        eye_variance = np.var(eye_region)
-        eye_edges = cv2.Canny(eye_region, 50, 150)
-        eye_edge_density = np.sum(eye_edges > 0) / eye_edges.size if eye_edges.size > 0 else 0
-        
-        score = 0
-        reasons = []
-        
-        if eye_variance < 300:
-            score += 0.10
-            reasons.append("Eyes lack detail")
-        
-        if eye_edge_density > 0.20 or eye_edge_density < 0.02:
-            score += 0.10
-            reasons.append("Abnormal eye edges")
-        
-        return min(score, 0.20), reasons if reasons else ["Normal eyes"]
-    
-    def analyze_temporal_consistency(self, current_face):
-        """Temporal consistency analysis"""
-        if len(self.face_history) < 5:
-            return 0.05, ["Insufficient history"]
-        
-        prev_faces = list(self.face_history)[-5:]
-        prev_avg = np.mean(prev_faces, axis=0)
-        
-        diff = np.mean(np.abs(current_face.astype(float) - prev_avg)) / 255
-        
-        if diff > 0.20:
-            return 0.25, ["Sudden face change (temporal inconsistency)"]
-        elif diff > 0.10:
-            return 0.10, ["Minor face changes"]
+        if eye_region.size > 0:
+            eye_variance = np.var(eye_region)
+            eye_edges = cv2.Canny(eye_region, 50, 150)
+            eye_edge_density = np.sum(eye_edges > 0) / eye_edges.size if eye_edges.size > 0 else 0
+            
+            eye_score = 0
+            eye_reasons = []
+            if eye_variance < 300:
+                eye_score += 0.10
+                eye_reasons.append("Eyes lack detail")
+            if eye_edge_density > 0.20 or eye_edge_density < 0.02:
+                eye_score += 0.10
+                eye_reasons.append("Abnormal eye edges")
+            eye_score = min(eye_score, 0.20)
         else:
-            return 0.02, ["Consistent"]
-    
-    def analyze_face_quality(self, face):
-        """Complete face quality analysis"""
-        if face is None:
-            return 0.5, ["No face detected"]
+            eye_score = 0.10
+            eye_reasons = ["No eye region detected"]
         
-        gray = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
+        # 7. Temporal Consistency (اتساق الحركة بين الفريمات)
+        if len(self.face_history) >= 5:
+            prev_faces = list(self.face_history)[-5:]
+            prev_avg = np.mean(prev_faces, axis=0)
+            diff = np.mean(np.abs(face.astype(float) - prev_avg)) / 255
+            if diff > 0.20:
+                temporal_score = 0.25
+                temporal_reason = "Sudden face change (temporal inconsistency)"
+            elif diff > 0.10:
+                temporal_score = 0.10
+                temporal_reason = "Minor face changes"
+            else:
+                temporal_score = 0.02
+                temporal_reason = "Consistent"
+        else:
+            temporal_score = 0.05
+            temporal_reason = "Insufficient history"
         
-        blur_score, blur_reason = self.analyze_blur(gray)
-        symmetry_score, symmetry_reason = self.analyze_symmetry(gray)
-        edge_score, edge_reason = self.analyze_edges(gray)
-        color_score, color_reasons = self.analyze_color(face)
-        noise_score, noise_reason = self.analyze_noise(gray)
-        eye_score, eye_reasons = self.analyze_eye_region(gray)
-        temporal_score, temporal_reasons = self.analyze_temporal_consistency(face)
-        
+        # حساب النتيجة النهائية (مو عشوائية)
         total_score = (
             blur_score * 0.20 +
-            symmetry_score * 0.25 +
+            sym_score * 0.20 +
             edge_score * 0.15 +
             color_score * 0.15 +
             noise_score * 0.10 +
             eye_score * 0.10 +
-            temporal_score * 0.05
+            temporal_score * 0.10
         )
         
+        # تجميع الأسباب
         all_reasons = []
         if blur_score > 0.10:
             all_reasons.append(blur_reason)
-        if symmetry_score > 0.10:
-            all_reasons.append(symmetry_reason)
+        if sym_score > 0.10:
+            all_reasons.append(sym_reason)
         if edge_score > 0.10:
             all_reasons.append(edge_reason)
         all_reasons.extend(color_reasons)
         if noise_score > 0.10:
             all_reasons.append(noise_reason)
         all_reasons.extend(eye_reasons)
-        all_reasons.extend(temporal_reasons)
+        all_reasons.append(temporal_reason)
         
-        confidence = 1 - total_score
+        # نضبط النتيجة تكون بين 0 و 1
+        fake_prob = max(0.1, min(0.95, total_score))
+        confidence = abs(fake_prob - 0.5) * 2
         
-        return min(total_score, 0.95), all_reasons[:5], confidence
+        return fake_prob, all_reasons[:5], confidence
     
     def analyze_frame(self, frame):
-        """Analyze single frame"""
+        """Analyze single frame - AI first, then heuristics"""
         face = self.extract_faces(frame)
         
         if face is not None:
-            fake_prob, reasons, confidence = self.analyze_face_quality(face)
-            model_used = "Enhanced Face Analysis"
-        else:
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-            
-            if laplacian_var < 100:
-                fake_prob = 0.55
-            elif laplacian_var < 200:
-                fake_prob = 0.45
-            else:
-                fake_prob = 0.35
-            
-            confidence = abs(fake_prob - 0.5) * 2
-            reasons = ["No face detected", "Using full frame analysis"]
-            model_used = "Full Frame Analysis"
+            # Try AI first if available
+            ai_result = self.analyze_with_ai(face)
+            if ai_result:
+                return ai_result
         
-        return {
-            'fake_probability': float(fake_prob),
-            'real_probability': float(1 - fake_prob),
-            'confidence': float(min(confidence, 0.95)),
-            'model_used': model_used,
-            'reasons': reasons
-        }
+        # Fallback to enhanced heuristics
+        if face is not None:
+            fake_prob, reasons, confidence = self.analyze_face_quality(face)
+            return {
+                'fake_probability': float(fake_prob),
+                'real_probability': float(1 - fake_prob),
+                'confidence': float(confidence),
+                'model_used': 'Enhanced Heuristics (7 factors)',
+                'reasons': reasons
+            }
+        else:
+            return {
+                'fake_probability': 0.5,
+                'real_probability': 0.5,
+                'confidence': 0.3,
+                'model_used': 'No Face Detected',
+                'reasons': ['No face detected in frame', 'Try a video with clear faces']
+            }
     
     def analyze_sequence(self, frames_sequence, fps=30):
         """Analyze sequence of frames"""
@@ -247,7 +272,7 @@ class DeepfakeDetector:
         
         if variance > 0.08:
             avg_score = min(avg_score + 0.12, 0.95)
-            all_reasons.append("High temporal variance")
+            all_reasons.append("High temporal variance detected")
         
         unique_reasons = list(dict.fromkeys(all_reasons))[:5]
         
@@ -264,25 +289,4 @@ class DeepfakeDetector:
         return None
     
     def build_temporal_model(self):
-        return None
-
-
-# Mock detector for fallback mode
-class MockDetector:
-    def __init__(self):
-        pass
-    
-    def analyze_frame(self, frame):
-        return {
-            'fake_probability': 0.5,
-            'real_probability': 0.5,
-            'confidence': 0.5,
-            'model_used': 'Mock (Fallback Mode)',
-            'reasons': ['AI model unavailable', 'Running in demo mode']
-        }
-    
-    def extract_faces(self, frame):
-        return None
-    
-    def analyze_sequence(self, frames_sequence, fps=30):
         return None
