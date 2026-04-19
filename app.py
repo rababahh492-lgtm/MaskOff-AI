@@ -17,16 +17,13 @@ st.set_page_config(
 )
 
 # =========================
-# Custom CSS (نفس التصميم الأصلي)
+# Custom CSS
 # =========================
 st.markdown("""
 <style>
-    /* Main background */
     .stApp {
         background: linear-gradient(135deg, #0a0a0f 0%, #0f0f1a 25%, #141428 50%, #1a0a2e 75%, #0a0a15 100%);
     }
-    
-    /* Hero Section */
     .hero-section {
         min-height: 100vh;
         display: flex;
@@ -36,8 +33,6 @@ st.markdown("""
         text-align: center;
         padding: 2rem;
     }
-    
-    /* Title */
     .main-title {
         font-family: 'Orbitron', monospace;
         font-size: 5rem;
@@ -49,8 +44,6 @@ st.markdown("""
         margin-bottom: 1rem;
         text-align: center;
     }
-    
-    /* Typing effect */
     .typing-wrapper {
         display: inline-block;
         overflow: hidden;
@@ -58,16 +51,13 @@ st.markdown("""
         border-right: 3px solid #9b59b6;
         animation: typing 3.5s steps(40, end), blinkCursor 0.75s step-end infinite;
     }
-    
     @keyframes typing {
         from { width: 0; }
         to { width: 100%; }
     }
-    
     @keyframes blinkCursor {
         50% { border-color: transparent; }
     }
-    
     .tagline-text {
         font-family: 'Poppins', sans-serif;
         font-size: 1.8rem;
@@ -75,8 +65,6 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
-    
-    /* Analysis Container */
     .analysis-container {
         background: rgba(10,10,26,0.8);
         backdrop-filter: blur(15px);
@@ -85,8 +73,6 @@ st.markdown("""
         margin: 1rem;
         border: 1px solid rgba(102,126,234,0.3);
     }
-    
-    /* Metric Cards */
     .metric-card {
         background: rgba(255,255,255,0.05);
         backdrop-filter: blur(10px);
@@ -96,12 +82,10 @@ st.markdown("""
         border: 1px solid rgba(102,126,234,0.2);
         transition: all 0.3s ease;
     }
-    
     .metric-card:hover {
         transform: translateY(-5px);
         border-color: rgba(102,126,234,0.5);
     }
-    
     .metric-value {
         font-size: 2rem;
         font-weight: bold;
@@ -109,44 +93,12 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
-    
-    /* Risk badges */
-    .risk-high {
-        background: #ff4757;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: bold;
-        display: inline-block;
-    }
-    
-    .risk-medium {
-        background: #ffa502;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: bold;
-        display: inline-block;
-    }
-    
-    .risk-low {
-        background: #2ed573;
-        color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: bold;
-        display: inline-block;
-    }
-    
-    /* Hide default elements */
+    .risk-high { background: #ff4757; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; }
+    .risk-medium { background: #ffa502; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; }
+    .risk-low { background: #2ed573; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; display: inline-block; }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    
-    /* Buttons */
     .stButton > button {
         background: linear-gradient(135deg, #667eea, #764ba2);
         color: white;
@@ -156,7 +108,6 @@ st.markdown("""
         font-weight: bold;
         width: 100%;
     }
-    
     .stButton > button:hover {
         transform: translateY(-2px);
         box-shadow: 0 5px 20px rgba(102,126,234,0.4);
@@ -181,59 +132,41 @@ if 'video_name' not in st.session_state:
     st.session_state.video_name = None
 
 # =========================
+# Caching for performance
+# =========================
+@st.cache_data
+def extract_frames_cached(video_path, frame_skip):
+    """تخزين الفريمات في cache لتحسين الأداء"""
+    cap = cv2.VideoCapture(video_path)
+    frames = []
+    frame_num = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        if frame_num % frame_skip == 0:
+            frames.append(frame)
+        frame_num += 1
+    cap.release()
+    return frames
+
+# =========================
 # Import Modules
 # =========================
-from models.deepfake_detector import DeepfakeDetector
+from core.detector import DeepfakeDetector
 from utils.evidence_manager import EvidenceSystem
 from utils.report_generator import ForensicReportGenerator
 from utils.audio_analysis import AudioAnalyzer
+from core.risk_engine import RiskEngine
+from core.explainability import ExplainabilityEngine
 
 # Initialize components
 detector = DeepfakeDetector()
 evidence = EvidenceSystem()
 report_gen = ForensicReportGenerator()
 audio_analyzer = AudioAnalyzer()
-
-# =========================
-# Helper Functions
-# =========================
-
-def calculate_unified_risk(face_score, audio_score, temporal_score, lip_sync_score=0.5):
-    """Calculate Unified Risk Score (0-100)"""
-    weights = {
-        'face': 0.40,
-        'audio': 0.25,
-        'temporal': 0.20,
-        'lip_sync': 0.15
-    }
-    
-    total = (
-        face_score * weights['face'] +
-        audio_score * weights['audio'] +
-        temporal_score * weights['temporal'] +
-        lip_sync_score * weights['lip_sync']
-    )
-    
-    return total * 100
-
-def get_top_reasons(results):
-    """Extract top 3 reasons for the verdict"""
-    all_reasons = results.get('reasons', []).copy()
-    
-    if results.get('suspicious_count', 0) > results.get('analyzed_frames', 1) * 0.5:
-        all_reasons.append("High number of suspicious frames")
-    if results.get('authenticity_score', 100) < 50:
-        all_reasons.append("Low authenticity score indicates manipulation")
-    
-    audio_reasons = results.get('audio_reasons', [])
-    all_reasons.extend(audio_reasons)
-    
-    unique_reasons = []
-    for r in all_reasons:
-        if r not in unique_reasons:
-            unique_reasons.append(r)
-    
-    return unique_reasons[:3] if unique_reasons else ["Analysis complete", "No major anomalies detected"]
+risk_engine = RiskEngine()
+explainability = ExplainabilityEngine()
 
 # =========================
 # Landing Page
@@ -265,7 +198,6 @@ elif st.session_state.page == 'analysis':
     
     st.markdown('<div class="analysis-container">', unsafe_allow_html=True)
     
-    # Header with Back button
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.button("← Back"):
@@ -285,12 +217,8 @@ elif st.session_state.page == 'analysis':
     
     st.markdown("---")
     
-    # =========================
-    # TABS: Upload Video / Live Camera / Real-Time Video
-    # =========================
     tab1, tab2, tab3 = st.tabs(["📁 Upload Video", "🎥 Live Camera", "📹 Real-Time Video Analysis"])
     
-    # ========== TAB 1: Upload Video (نفس النظام القديم) ==========
     with tab1:
         if not st.session_state.analysis_complete and not st.session_state.processing:
             uploaded_file = st.file_uploader("📤 Upload Video", type=["mp4", "avi", "mov"])
@@ -306,7 +234,6 @@ elif st.session_state.page == 'analysis':
                 
                 st.session_state.video_path = video_path
                 st.session_state.video_name = uploaded_file.name
-                
                 st.video(video_path)
                 
                 col1, col2, col3 = st.columns([1, 2, 1])
@@ -315,21 +242,17 @@ elif st.session_state.page == 'analysis':
                         st.session_state.processing = True
                         st.rerun()
     
-    # ========== TAB 2: Live Camera ==========
     with tab2:
         st.markdown("### 🎥 Live Camera Deepfake Detection")
-        st.markdown("Point your camera at a face and watch real-time analysis")
-        
         start_camera = st.button("📸 Start Live Camera")
         
         if start_camera:
             frame_placeholder = st.empty()
             metrics_placeholder = st.empty()
-            
             cap = cv2.VideoCapture(0)
             
             if not cap.isOpened():
-                st.error("Could not open camera. Please check your camera connection.")
+                st.error("Could not open camera.")
             else:
                 stop = st.button("🛑 Stop Camera")
                 while not stop:
@@ -338,7 +261,6 @@ elif st.session_state.page == 'analysis':
                         break
                     
                     result = detector.analyze_frame(frame)
-                    
                     frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     frame_placeholder.image(frame_rgb, channels="RGB", use_container_width=True)
                     
@@ -354,13 +276,10 @@ elif st.session_state.page == 'analysis':
                     
                     if stop:
                         break
-                
                 cap.release()
     
-    # ========== TAB 3: Real-Time Video Analysis ==========
     with tab3:
         st.markdown("### 📹 Real-Time Video Frame Analysis")
-        
         uploaded_live_video = st.file_uploader("Upload Video for Real-Time Analysis", type=["mp4", "avi", "mov"], key="live_video")
         
         if uploaded_live_video:
@@ -374,9 +293,7 @@ elif st.session_state.page == 'analysis':
                 cap = cv2.VideoCapture(temp_path)
                 progress_bar = st.progress(0)
                 results_container = st.container()
-                
                 frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                frame_analyses = []
                 
                 for i in range(0, frame_count, 10):
                     cap.set(cv2.CAP_PROP_POS_FRAMES, i)
@@ -385,11 +302,6 @@ elif st.session_state.page == 'analysis':
                         break
                     
                     result = detector.analyze_frame(frame)
-                    frame_analyses.append({
-                        'frame': i,
-                        'fake_prob': result['fake_probability'],
-                        'confidence': result['confidence']
-                    })
                     
                     with results_container.container():
                         col_a, col_b = st.columns(2)
@@ -402,14 +314,7 @@ elif st.session_state.page == 'analysis':
                 
                 cap.release()
                 os.unlink(temp_path)
-                
-                if frame_analyses:
-                    avg_fake = np.mean([f['fake_prob'] for f in frame_analyses])
-                    st.success(f"✅ Analysis Complete! Average Fake Probability: {avg_fake:.1%}")
     
-    # =========================
-    # Processing (نفس النظام القديم)
-    # =========================
     if st.session_state.processing:
         with st.spinner("🧠 Analyzing video with AI..."):
             cap = cv2.VideoCapture(st.session_state.video_path)
@@ -419,8 +324,7 @@ elif st.session_state.page == 'analysis':
             frame_analyses = []
             suspicious_frames_data = []
             frame_num = 0
-            frame_skip = max(1, frame_count // 50)
-            
+            frame_skip = max(1, frame_count // 30)
             progress_bar = st.progress(0)
             
             while cap.isOpened():
@@ -458,29 +362,34 @@ elif st.session_state.page == 'analysis':
             
             cap.release()
             
-            # Audio analysis
             audio_result = audio_analyzer.detect_deepfake_audio(st.session_state.video_path)
             
-            # Calculate results
             fake_probs = [a['fake_prob'] for a in frame_analyses]
             avg_fake_prob = np.mean(fake_probs) if fake_probs else 0.5
             authenticity_score = (1 - avg_fake_prob) * 100
             suspicious_count = len([p for p in fake_probs if p > 0.5])
-            temporal_variance = np.var(fake_probs) if len(fake_probs) > 1 else 0.5
             
-            # Unified Risk
-            unified_risk = calculate_unified_risk(
+            temporal_score, temporal_reason, temporal_quality = risk_engine.detect_temporal_anomalies(fake_probs)
+            
+            unified_risk = risk_engine.calculate_unified_risk(
                 face_score=avg_fake_prob,
                 audio_score=audio_result.get('fake_probability', 0.5),
-                temporal_score=temporal_variance
+                temporal_score=temporal_score,
+                face_quality=0.7,
+                audio_quality=audio_result.get('confidence', 0.5),
+                temporal_quality=temporal_quality,
+                lip_sync_score=0.5,
+                lip_sync_quality=0.5
             )
             
-            # Collect reasons
             all_reasons = []
             if suspicious_count > len(frame_analyses) * 0.5:
                 all_reasons.append(f"High number of suspicious frames ({suspicious_count}/{len(frame_analyses)})")
             if authenticity_score < 50:
                 all_reasons.append("Low authenticity score indicates possible manipulation")
+            if temporal_reason:
+                all_reasons.append(temporal_reason)
+                all_reasons.append(f"⚠️ {temporal_reason} - High impact on final risk")
             
             for analysis in frame_analyses[:10]:
                 if analysis.get('reasons'):
@@ -491,6 +400,15 @@ elif st.session_state.page == 'analysis':
             
             all_reasons = list(dict.fromkeys(all_reasons))[:10]
             
+            top_reasons = explainability.get_top_reasons({
+                'reasons': all_reasons,
+                'suspicious_count': suspicious_count,
+                'analyzed_frames': len(frame_analyses),
+                'authenticity_score': authenticity_score,
+                'audio_reasons': audio_result.get('reasons', []),
+                'temporal_reason': temporal_reason
+            })
+            
             st.session_state.results = {
                 'frame_count': frame_count,
                 'analyzed_frames': len(frame_analyses),
@@ -500,23 +418,21 @@ elif st.session_state.page == 'analysis':
                 'frame_analyses': frame_analyses,
                 'suspicious_frames_data': suspicious_frames_data,
                 'video_name': st.session_state.video_name,
-                'model_used': 'Enhanced Face + Audio Analysis',
+                'model_used': 'Enhanced Face + Audio + Temporal',
                 'reasons': all_reasons,
+                'top_reasons': top_reasons,
                 'audio_analysis': audio_result,
-                'audio_reasons': audio_result.get('reasons', [])
+                'audio_reasons': audio_result.get('reasons', []),
+                'temporal_reason': temporal_reason
             }
         
         st.session_state.processing = False
         st.session_state.analysis_complete = True
         st.rerun()
     
-    # =========================
-    # Show Results
-    # =========================
     if st.session_state.analysis_complete and st.session_state.results:
         results = st.session_state.results
         
-        # Metrics - 5 cards
         col1, col2, col3, col4, col5 = st.columns(5)
         
         with col1:
@@ -570,21 +486,18 @@ elif st.session_state.page == 'analysis':
             </div>
             """, unsafe_allow_html=True)
         
-        # Top 3 Reasons
-        top_reasons = get_top_reasons(results)
+        top_reasons = results.get('top_reasons', results.get('reasons', []))[:3]
         st.markdown("---")
         st.markdown("### 🔍 Why This Verdict? (Top 3 Reasons)")
-        for i, reason in enumerate(top_reasons[:3]):
+        for i, reason in enumerate(top_reasons):
             st.markdown(f"{i+1}. {reason}")
         
-        # Chart
         if results['frame_analyses']:
             st.markdown("---")
             st.markdown("### 📈 Deepfake Probability Over Time")
             
             frame_data = pd.DataFrame(results['frame_analyses'])
             fig = go.Figure()
-            
             fig.add_trace(go.Scatter(
                 x=frame_data['frame_num'],
                 y=frame_data['fake_prob'],
@@ -593,9 +506,7 @@ elif st.session_state.page == 'analysis':
                 line=dict(color='#ff4757', width=2),
                 marker=dict(size=6)
             ))
-            
             fig.add_hline(y=0.5, line_dash="dash", line_color="#ffa502", annotation_text="Threshold (50%)")
-            
             fig.update_layout(
                 title="Frame-by-Frame Deepfake Detection",
                 xaxis_title="Frame Number",
@@ -606,10 +517,8 @@ elif st.session_state.page == 'analysis':
                 font=dict(color='white'),
                 height=400
             )
-            
             st.plotly_chart(fig, use_container_width=True)
         
-        # Gallery
         if results['suspicious_frames_data']:
             st.markdown("---")
             st.markdown("### 🖼️ Suspicious Frames Gallery")
@@ -626,7 +535,6 @@ elif st.session_state.page == 'analysis':
                         except:
                             pass
         
-        # PDF Report
         st.markdown("---")
         col1, col2, col3 = st.columns([1, 1, 1])
         with col2:
@@ -643,7 +551,6 @@ elif st.session_state.page == 'analysis':
                                 use_container_width=True
                             )
         
-        # Action Buttons
         st.markdown("---")
         col1, col2 = st.columns(2)
         with col1:
